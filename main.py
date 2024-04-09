@@ -7,6 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, recall_score, f1_score, precision_score
 from sklearn.neighbors import KNeighborsClassifier
+import matplotlib.pyplot as plt
 
 
 def treinar_testar(model, data, test, y_cols='Classificação'):
@@ -120,6 +121,19 @@ if __name__ == '__main__':
         morfologiaBots[item] *= 100
 
     print(morfologiaBots)
+
+    percentualMorfologiaBots = np.array(list(morfologiaUsuariosReais.items()))
+    percentualMorfologiaReais = np.array(list(morfologiaBots.items()))
+    print(percentualMorfologiaBots)
+    for percentual in percentualMorfologiaBots:
+        if percentual[0] != "DET" and float(percentual[1]) > 5:
+            plt.scatter(percentual[0], float(percentual[1]), color="red")
+
+    for percentual in percentualMorfologiaReais:
+        if percentual[0] != "DET" and float(percentual[1]) > 5:
+            plt.scatter(percentual[0], float(percentual[1]), color="blue")
+
+    plt.show()
     # for comentario in comentarios:
     # doc = nlp(comentario)
     # print(doc.text)
