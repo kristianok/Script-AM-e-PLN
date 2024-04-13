@@ -8,6 +8,52 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, recall_score, f1_score, precision_score
 from sklearn.neighbors import KNeighborsClassifier
 import matplotlib.pyplot as plt
+from collections import OrderedDict
+import nltk
+
+nltk.download('stopwords')
+stopwords = nltk.corpus.stopwords.words('portuguese')
+
+def plotPalavras(quantidade, palavras):
+    names = list(palavras.keys())
+    values = list(palavras.values())
+    names = names[:quantidade]
+    values = values[:quantidade]
+
+    plt.barh(range(len(values)), values, tick_label=names)
+    plt.gca().invert_yaxis()
+    plt.show()
+
+def contarPalavras(comentarios):
+    dic = {}
+    for comentario in comentarios:
+        words = comentario.split()
+        for raw_word in words:
+            word = raw_word.lower()
+            if word in stopwords or word == "?" or word == "!" or word == "." or word == ",":
+                continue
+            if word in dic:
+                dic[word] += 1
+            else:
+                dic[word] = 1
+
+    return dict(sorted(dic.items(), key=lambda item: item[1], reverse=True))
+
+
+def traduzirTags(lista):
+    i = 0
+    for r in lista:
+        if r[0] == "NOUN":
+            lista[i] = ("SUBSTANTIVO", r[1])
+        elif r[0] == "PUNCT":
+            lista[i] = ("PONTUAÇÃO", r[1])
+        elif r[0] == "ADJ":
+            lista[i] = ("ADJETIVO", r[1])
+        elif r[0] == "ADP":
+            lista[i] = ("SUBSTANTIVO", r[1])
+        elif r[0] == "VERB":
+            lista[i] = ("VERBO", r[1])
+        i += 1
 
 
 def treinar_testar(model, data, test, y_cols='Classificação'):
@@ -122,20 +168,41 @@ if __name__ == '__main__':
 
     print(morfologiaBots)
 
-    percentualMorfologiaBots = np.array(list(morfologiaUsuariosReais.items()))
-    percentualMorfologiaReais = np.array(list(morfologiaBots.items()))
-    print(percentualMorfologiaBots)
+    listaReais = list(morfologiaUsuariosReais.items())
+    listaBots = list(morfologiaBots.items())
+    listaReais = [r for r in listaReais if
+                  r[0] != "DET" and r[0] != "ADV" and r[0] != "PRON" and r[0] != "PROPN" and r[0] != "ADP"]
+    listaBots = [b for b in listaBots if
+                 b[0] != "DET" and b[0] != "ADV" and b[0] != "PRON" and b[0] != "PROPN" and b[0] != "ADP"]
+
+    traduzirTags(listaReais)
+    traduzirTags(listaBots)
+
+    percentualMorfologiaBots = np.array(listaBots)
+    percentualMorfologiaReais = np.array(listaReais)
+
     for percentual in percentualMorfologiaBots:
-        if percentual[0] != "DET" and float(percentual[1]) > 5:
-            plt.scatter(percentual[0], float(percentual[1]), color="red")
+        if float(percentual[1]) > 5:
+            plt.scatter(percentual[0], float(percentual[1]), color="red", label="bot")
 
     for percentual in percentualMorfologiaReais:
-        if percentual[0] != "DET" and float(percentual[1]) > 5:
-            plt.scatter(percentual[0], float(percentual[1]), color="blue")
+        if float(percentual[1]) > 5:
+            plt.scatter(percentual[0], float(percentual[1]), color="blue", label="real")
 
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    plt.legend(by_label.values(), by_label.keys())
+    plt.xlabel("Classes")
+    plt.ylabel("Percentual")
     plt.show()
-    # for comentario in comentarios:
-    # doc = nlp(comentario)
-    # print(doc.text)
-    # for token in doc:
-    # print(token.text, token.pos_, token.dep_)
+
+    print('palavras bots')
+    palavrasBots = contarPalavras(comentariosBots)
+    print('palavras reais')
+    palavrasReais = contarPalavras(comentariosReais)
+
+    plt.rcParams['font.size'] = 7
+    plotPalavras(15, palavrasBots)
+    plotPalavras(15, palavrasReais)
+
+
