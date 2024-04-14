@@ -14,6 +14,25 @@ import nltk
 nltk.download('stopwords')
 stopwords = nltk.corpus.stopwords.words('portuguese')
 
+
+def aprendizadoMaquina(data, test, modelo):
+    corretos, preditos = treinar_testar(modelo, data, test)
+
+    print(corretos)
+    print(preditos)
+
+    print("\n")
+    print(modelo)
+    print("\nAcurácia: ")
+    print(accuracy_score(corretos, preditos))
+    print("\nRecall: ")
+    print(recall_score(corretos, preditos))
+    print("\nF1: ")
+    print(f1_score(corretos, preditos))
+    print("\nPrecisão: ")
+    print(precision_score(corretos, preditos))
+
+
 def plotPalavras(quantidade, palavras):
     names = list(palavras.keys())
     values = list(palavras.values())
@@ -23,6 +42,7 @@ def plotPalavras(quantidade, palavras):
     plt.barh(range(len(values)), values, tick_label=names)
     plt.gca().invert_yaxis()
     plt.show()
+
 
 def contarPalavras(comentarios):
     dic = {}
@@ -87,37 +107,24 @@ if __name__ == '__main__':
         df = df.replace(binario)
     # with pandas.option_context('display.max_rows', None, 'display.max_columns', None):print(df)
 
-    data, test = train_test_split(df, test_size=0.2)
+    data, test = train_test_split(df, test_size=0.2, random_state=0)
 
-    corretos, preditos = treinar_testar(RandomForestClassifier(), data, test)
+    print("Modelo 1")
 
-    print(corretos)
-    print(preditos)
+    aprendizadoMaquina(data, test, RandomForestClassifier())
+    aprendizadoMaquina(data, test, KNeighborsClassifier())
 
-    print("\nRandomForestClassifier")
-    print("\nAcurácia: ")
-    print(accuracy_score(corretos, preditos))
-    print("\nRecall: ")
-    print(recall_score(corretos, preditos))
-    print("\nF1: ")
-    print(f1_score(corretos, preditos))
-    print("\nPrecisão: ")
-    print(precision_score(corretos, preditos))
+    df = df.drop("Quantidade de caractéres na \"bio\"", axis=1)
+    df = df.drop("Possui foto de perfil?", axis=1)
+    df = df.drop("Quantidade de dígitos numéricos no nome de usuário", axis=1)
+    df = df.drop("Quantidade de curtidas no comentário", axis=1)
 
-    corretos, preditos = treinar_testar(KNeighborsClassifier(), data, test)
+    data, test = train_test_split(df, test_size=0.2, random_state=0)
 
-    print(corretos)
-    print(preditos)
+    print("Modelo 2")
 
-    print("\nKNeighborsClassifier")
-    print("\nAcurácia: ")
-    print(accuracy_score(corretos, preditos))
-    print("\nRecall: ")
-    print(recall_score(corretos, preditos))
-    print("\nF1: ")
-    print(f1_score(corretos, preditos))
-    print("\nPrecisão: ")
-    print(precision_score(corretos, preditos))
+    aprendizadoMaquina(data, test, RandomForestClassifier())
+    aprendizadoMaquina(data, test, KNeighborsClassifier())
 
     comentarios = pandas.read_excel(r"C:\Users\Kristiano\Downloads\ComentariosTratadosSpacy.xlsx")
     comentariosReais = comentarios[comentarios["Classificação"] == "Real"]
@@ -204,5 +211,3 @@ if __name__ == '__main__':
     plt.rcParams['font.size'] = 7
     plotPalavras(15, palavrasBots)
     plotPalavras(15, palavrasReais)
-
-
