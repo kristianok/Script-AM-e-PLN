@@ -14,6 +14,55 @@ import nltk
 nltk.download('stopwords')
 stopwords = nltk.corpus.stopwords.words('portuguese')
 
+def dataframeMorfologia(comentarios):
+    adj = []
+    verb = []
+    punct = []
+    noun = []
+    for comentario in comentarios:
+        variavel = variaveisMorfologia(comentario)
+        adj.append(variavel[0])
+        verb.append(variavel[1])
+        punct.append(variavel[2])
+        noun.append(variavel[3])
+
+    variaveisComentarios = pandas.DataFrame(
+        {'Número médio de adjetivos': adj, 'Número médio de verbos': verb, 'Número médio de pontuação': punct, 'Número médio de substantivos': noun})
+    return variaveisComentarios
+
+def variaveisMorfologia(comentario):
+    total_adj = 0
+    total_punct = 0
+    total_verb = 0
+    total_noun = 0
+    total_tokens = 0
+    doc = nlp(comentario)
+    for sent in doc.sents:
+        for token in sent:
+            total_tokens += 1
+            if token.pos_ == "ADJ":
+                total_adj += 1
+            elif token.pos_ == "VERB":
+                total_punct += 1
+            elif token.pos_ == "PUNCT":
+                total_verb += 1
+            elif token.pos_ == "NOUN":
+                total_noun += 1
+    return total_adj / total_tokens, total_verb / total_tokens, total_punct / total_tokens, total_noun / total_tokens
+
+
+def morfologia(comentarios):
+    morf = None
+    for comentario in comentarios:
+        doc = nlp(comentario)
+        for sent in doc.sents:
+            for token in sent:
+                c = Counter(([token.pos_ for token in sent for sent in doc.sents]))
+        if morf is None:
+            morf = c
+        morf += c
+    return morf
+
 
 def aprendizadoMaquina(data, test, modelo):
     corretos, preditos = treinar_testar(modelo, data, test)
@@ -100,67 +149,27 @@ def treinar_testar(model, data, test, y_cols='Classificação'):
 
 
 if __name__ == '__main__':
-    df = pandas.read_excel(r"C:\Users\Kristiano\Downloads\DadosBotsInstagram.xlsx")
-    binario = {'Sim': True, 'Não': False, 'Bot': True, 'Real': False}
-    df = df.drop('Comentário', axis=1)
-    with pandas.option_context("future.no_silent_downcasting", True):
-        df = df.replace(binario)
-    # with pandas.option_context('display.max_rows', None, 'display.max_columns', None):print(df)
-
-    data, test = train_test_split(df, test_size=0.2, random_state=0)
-
-    print("Modelo 1")
-
-    aprendizadoMaquina(data, test, RandomForestClassifier())
-    aprendizadoMaquina(data, test, KNeighborsClassifier())
-
-    df = df.drop("Quantidade de caractéres na \"bio\"", axis=1)
-    df = df.drop("Possui foto de perfil?", axis=1)
-    df = df.drop("Quantidade de dígitos numéricos no nome de usuário", axis=1)
-    df = df.drop("Quantidade de curtidas no comentário", axis=1)
-
-    data, test = train_test_split(df, test_size=0.2, random_state=0)
-
-    print("Modelo 2")
-
-    aprendizadoMaquina(data, test, RandomForestClassifier())
-    aprendizadoMaquina(data, test, KNeighborsClassifier())
 
     comentarios = pandas.read_excel(r"C:\Users\Kristiano\Downloads\ComentariosTratadosSpacy.xlsx")
     comentariosReais = comentarios[comentarios["Classificação"] == "Real"]
     comentariosBots = comentarios[comentarios["Classificação"] == "Bot"]
-    comentarios = np.array(comentariosReais["Comentário"]).ravel()
+    comentarios = np.array(comentarios["Comentário"]).ravel()
     comentariosReais = np.array(comentariosReais["Comentário"]).ravel()
     comentariosBots = np.array(comentariosBots["Comentário"]).ravel()
     qtdReais = comentariosReais.shape[0]
     qtdBots = comentariosBots.shape[0]
     nlp = spacy.load("pt_core_news_sm")
 
-    morfologiaBots = None
+    variaveisComentarios = dataframeMorfologia(comentarios)
 
-    for comentario in comentariosBots:
-        doc = nlp(comentario)
-        for sent in doc.sents:
-            for token in sent:
-                c = Counter(([token.pos_ for token in sent for sent in doc.sents]))
-        if morfologiaBots is None:
-            morfologiaBots = c
-        morfologiaBots += c
+    morfologiaBots = morfologia(comentariosBots)
 
     print(morfologiaBots)
 
-    morfologiaUsuariosReais = None
-
-    for comentario in comentariosReais:
-        doc = nlp(comentario)
-        for sent in doc.sents:
-            for token in sent:
-                c = Counter(([token.pos_ for token in sent for sent in doc.sents]))
-        if morfologiaUsuariosReais is None:
-            morfologiaUsuariosReais = c
-        morfologiaUsuariosReais += c
+    morfologiaUsuariosReais = morfologia(comentariosReais)
 
     print(morfologiaUsuariosReais)
+
     totalMorfologia = sum(morfologiaUsuariosReais.values())
     for item, count in morfologiaUsuariosReais.items():
         morfologiaUsuariosReais[item] /= totalMorfologia
@@ -211,3 +220,31 @@ if __name__ == '__main__':
     plt.rcParams['font.size'] = 7
     plotPalavras(15, palavrasBots)
     plotPalavras(15, palavrasReais)
+
+    df = pandas.read_excel(r"C:\Users\Kristiano\Downloads\DadosBotsInstagram.xlsx")
+    binario = {'Sim': True, 'Não': False, 'Bot': True, 'Real': False}
+    df = df.drop('Comentário', axis=1)
+    with pandas.option_context("future.no_silent_downcasting", True):
+        df = df.replace(binario)
+    # with pandas.option_context('display.max_rows', None, 'display.max_columns', None):print(df)
+    df = df.join(variaveisComentarios)
+    data, test = train_test_split(df, test_size=0.2, random_state=0)
+
+    print("Modelo 1")
+
+    aprendizadoMaquina(data, test, RandomForestClassifier())
+    aprendizadoMaquina(data, test, KNeighborsClassifier())
+
+    df = df.drop("Quantidade de caractéres na \"bio\"", axis=1)
+    df = df.drop("Possui foto de perfil?", axis=1)
+    df = df.drop("Quantidade de dígitos numéricos no nome de usuário", axis=1)
+    df = df.drop("Quantidade de curtidas no comentário", axis=1)
+    df = df.drop("Número médio de verbos", axis=1)
+    df = df.drop("Número médio de adjetivos", axis=1)
+
+    data, test = train_test_split(df, test_size=0.2, random_state=0)
+
+    print("Modelo 2")
+
+    aprendizadoMaquina(data, test, RandomForestClassifier())
+    aprendizadoMaquina(data, test, KNeighborsClassifier())
